@@ -25,31 +25,9 @@
       delegate_to: localhost
       delegate_facts: True
       block:
-        - name: replace lc on production asg
-          ec2_asg:
-            name: "{{item}}"
-            launch_config_name: "{{lc_name}}"
-            default_cooldown: 180
-            health_check_period: 300
-            health_check_type: ELB
-            replace_all_instances: "{{replace_all}}"
-            metrics_collection: yes
-            region: "{{ec2_region}}"
-            wait_for_instances: true
-            desired_capacity: 1
-            min_size: 1
-            max_size: 3 
-            # wait_timeout: 3000
-          when: "add_to_asg==true and host_env=='production'"
-          loop:
-            - "{{host_env}}-webserver"
-            - "{{host_env}}-backend"
-            - "{{host_env}}-assets"
-          async: 180
-          poll: 0
         - name: replace lc on uat asg
           ec2_asg:
-            name: "{{host_env}}-webserver"
+            name: "{{host_env}}-webs"
             launch_config_name: "{{lc_name}}"
             default_cooldown: 180
             health_check_period: 300
@@ -62,6 +40,5 @@
             min_size: 1
             max_size: 3 
 #            wait_timeout: 3000
-          when: "add_to_asg==true and host_env!='production'"
           async: 180
           poll: 0

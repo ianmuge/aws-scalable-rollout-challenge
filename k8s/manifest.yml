@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sample-stack
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spa-stack-service
+  namespace: sample-stack
+  labels:
+    app: spa-stack
+spec:
+  selector:
+    app: spa-stack
+  ports:
+  - port: 80
+    name: http 
+---
+apiVersion: v1               
+kind: Service                
+metadata:                    
+  name: spa-stack-lb        
+  namespace: sample-stack
+  labels:                    
+    app: spa-stack
+spec:                        
+  type: LoadBalancer         
+  selector:                  
+    app: spa-stack
+  ports:                     
+  - name: http               
+    port: 80             
+    protocol: TCP
+---
+apiVersion: autoscaling/v2beta1 
+kind: HorizontalPodAutoscaler
+metadata: 
+  name: spa-stack 
+  namespace: sample-stack
+spec: 
+  maxReplicas: 10 
+  minReplicas: 1 
+  scaleTargetRef: 
+    apiVersion: app/v1 
+    kind: Deployment 
+    name: spa-stack 
+  metrics: 
+  - type: Resource 
+    resource: 
+      name: cpu 
+      targetAverageUtilization: 60
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spa-stack
+  namespace: sample-stack
+  labels:
+    app: spa-stack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spa-stack
+  template:
+    metadata:
+      labels:
+        app: spa-stack
+    spec:
+      containers:
+      - name: spa-stack
+        image: ikmuge/nginx-spa:latest
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 256M
+          requests:
+            cpu: 100m
+            memory: 128M
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            timeoutSeconds: 5
