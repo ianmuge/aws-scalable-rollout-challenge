@@ -1,0 +1,16 @@
+---
+code_env: master
+
+initialize: false
+git_repo: "https://github.com/muge13/sample-spa.git"
+web_root: "/var/www/html"
+nginx_user: ec2-user
+
+ec2name: "{{'-'+ec2_Name if (ec2_Name is defined and ec2_Name!='') else ''}}"
+ec2role: "{{'-'+ec2_role if (ec2_role is defined and ec2_role!='') else ''}}"
+
+ec2_tag:
+  Name: "{{host_env}}{{ec2name}}{{ec2role}}"
+  service: "{{ec2_Name}}"
+  env: "{{host_env}}"
+  role: "{{ec2_role}}"

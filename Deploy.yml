@@ -1,0 +1,84 @@
+---
+- name: deployment scripts
+  hosts: tag_service_Test
+  user: ec2-user
+  gather_facts: true
+  vars:
+    add_to_asg: true
+    replace_all: true
+  pre_tasks:
+
+  roles:
+    - name: Deploy
+      when: inventory_hostname == ansible_play_hosts[0]
+  post_tasks:
+    - name: check that service is responding
+      uri:
+        url: "http://localhost"
+        return_content: yes
+        status_code: 200,302
+    - name: create image and add to lc group
+      when: inventory_hostname == ansible_play_hosts[0]
+      delegate_to: localhost
+      delegate_facts: True
+      tags:
+        - post_deploy
+      block:
+        - name: create ami image
+          ec2_ami:
+            delete_snapshot: no
+            description: "AMI-{{host_env}}-{{ec2_role}}-{{ansible_date_time.date}}-{{ansible_date_time.hour}}_{{ansible_date_time.minute}}"
+            instance_id: "{{ec2_id}}"
+            name: "AMI-{{host_env}}-{{ec2_role}}-{{ansible_date_time.date}}-{{ansible_date_time.hour}}_{{ansible_date_time.minute}}"
+            region: "{{ec2_region}}"
+            state: present
+            tags: "{{ec2_tag}}"
+            wait: true
+            enhanced_networking: true
+            architecture: "{{ec2_architecture}}"
+            virtualization_type: "{{ec2_virtualization_type}}"
+            root_device_name: "{{ec2_root_device_name}}"
+            device_mapping:
+              - device_name: "{{ec2_root_device_name}}"
+                volume_size: 30
+                delete_on_termination: true
+                volume_type: gp2
+          register: ami
+        - name: add to lc group
+          ec2_lc:
+            assign_public_ip: yes
+            image_id: "{{ami.image_id}}"
+            instance_monitoring: yes
+            instance_type: "{{ec2_instance_type}}"
+            key_name: "{{ec2_keypair}}"
+            name: "LC-{{host_env}}-{{ec2_role}}-{{ansible_date_time.date}}-{{ansible_date_time.hour}}_{{ansible_date_time.minute}}"
+            region: "{{ec2_region}}"
+            security_groups: "{{ec2_security_group_ids}}"
+            state: present
+            volumes:
+              - device_name: "{{ec2_root_device_name}}"
+                volume_size: 30
+                volume_type: gp2
+                delete_on_termination: true
+          register: lc
+        - name: get lc name
+          debug:
+            var: lc
+        - name: replace lc on asg
+          ec2_asg:
+            name: "{{host_env}}-web"
+            launch_config_name: "{{lc.name}}"
+            default_cooldown: 180
+            health_check_period: 300
+            health_check_type: ELB
+            replace_all_instances: "{{replace_all}}"
+            metrics_collection: yes
+            region: "{{ec2_region}}"
+            wait_for_instances: no
+            desired_capacity: 1
+            min_size: 1
+            max_size: 3
+#            wait_timeout: 3000
+          when: "add_to_asg==true"
+          async: 180
+          poll: 0

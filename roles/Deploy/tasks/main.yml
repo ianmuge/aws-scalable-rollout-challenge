@@ -1,0 +1,25 @@
+---
+- name: initialize
+  block:
+    - name: change permissions and ownership
+      become: true
+      file:
+        path: "{{web_root}}"
+        owner: "{{nginx_user}}"
+        group: "{{nginx_user}}"
+        recurse: yes
+    - name: clean webroot
+      command: "rm -rf {{web_root}}/*"
+  when: "initialize != false"
+- name: checkout code
+  git:
+    repo: "{{git_repo}}"
+    dest: "{{web_root}}"
+    clone: yes
+    force: yes
+    recursive: no
+    update: yes
+    track_submodules: no
+    version: "{{code_env}}"
+  tags:
+    - patch

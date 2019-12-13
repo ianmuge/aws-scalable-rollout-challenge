@@ -1,0 +1,6 @@
+---
+ec2_region: "eu-west-2"
+ec2_keypair: ikmuge
+secure: true
+gituser: "{{ lookup('env','GITUSER') }}"
+gitkey: "{{ lookup('env','GITKEY') }}"
